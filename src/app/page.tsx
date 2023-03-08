@@ -1,91 +1,113 @@
-import Image from 'next/image'
-import { Inter } from 'next/font/google'
-import styles from './page.module.css'
+'use client';
 
-const inter = Inter({ subsets: ['latin'] })
+import styles from './page.module.css';
+import React, { useReducer, useEffect } from 'react';
+import Header from './Components/Header';
+import Movie from './Components/Movie';
+import Search from './Components/Search';
 
-export default function Home() {
+const MOVIE_API_URL = 'https://www.omdbapi.com/?s=man&apikey=6f8ac3fc';
+
+// export interface IMovie {
+//   title: string,
+//   poster: string,
+//   year: number,
+// }
+
+//  interface StateInterface {
+//   loading: true,
+//   movies: Array<IMovie> | null,
+//   errorMessage: null,
+// };
+
+
+const initialState = {
+  loading: true,
+  movies: [],
+  errorMessage: null,
+};
+
+const reducer = (state: any, action: any) => {
+  switch (action.type) {
+    case 'SEARCH_MOVIES_REQUEST':
+      return {
+        ...state,
+        loading: true,
+        errorMessage: null,
+      };
+    case 'SEARCH_MOVIES_SUCCESS':
+      return {
+        ...state,
+        loading: false,
+        movies: action.payload,
+      };
+    case 'SEARCH_MOVIES_FAILURE':
+      return {
+        ...state,
+        loading: false,
+        errorMessage: action.error,
+      };
+    default:
+      return state;
+  }
+};
+
+export default function App() {
+  const [state, dispatch] = useReducer(reducer, initialState);
+
+  useEffect(() => {
+    fetch(MOVIE_API_URL)
+      .then((response) => response.json())
+      .then((jsonResponse) => {
+        dispatch({
+          type: 'SEARCH_MOVIES_SUCCESS',
+          payload: jsonResponse.Search ,
+        });
+      });
+  }, []);
+
+  const search = (searchValue: any) => {
+    dispatch({
+      type: 'SEARCH_MOVIES_REQUEST',
+    });
+
+    fetch(`https://www.omdbapi.com/?s=${searchValue}&apikey=6f8ac3fc`)
+      .then((response) => response.json())
+      .then((jsonResponse) => {
+        if (jsonResponse.Response === 'True') {
+          dispatch({
+            type: 'SEARCH_MOVIES_SUCCESS',
+            payload: jsonResponse.Search,
+          });
+        } else {
+          dispatch({
+            type: 'SEARCH_MOVIES_FAILURE',
+            error: jsonResponse.Error,
+          });
+        }
+      });
+  };
+
+  
+  const { movies, errorMessage, loading } = state;
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>src/app/page.tsx</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
+    <div className={styles.App}>
+      <Header text='Search film...' />
+      <Search search={search} />
+      <div className={styles.movies}>
+        {loading && !errorMessage ? (
+          <span className={styles.loading}>loading... </span>
+        ) : errorMessage ? (
+          <div className={styles.errorMessage}>{errorMessage}</div>
+        ) : (
+          movies.map((movie: any, index: any) => (
+            <Movie
+              key={`${index}-${movie.Title}`}
+              movie={movie}
             />
-          </a>
-        </div>
+          ))
+        )}
       </div>
-
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-        <div className={styles.thirteen}>
-          <Image src="/thirteen.svg" alt="13" width={40} height={31} priority />
-        </div>
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://beta.nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={inter.className}>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p className={inter.className}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={inter.className}>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p className={inter.className}>Explore the Next.js 13 playground.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={inter.className}>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p className={inter.className}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  )
+    </div>
+  );
 }
